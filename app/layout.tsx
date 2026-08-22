@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import AuthGuard from '../components/AuthGuard';
 
 export const metadata: Metadata = {
   title: 'Smart Campus 360',
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthGuard>{children}</AuthGuard>
+      </body>
     </html>
   );
 }
