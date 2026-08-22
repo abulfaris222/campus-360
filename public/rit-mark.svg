@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="RIT logo">
+<defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4cc7ff"/><stop offset="1" stop-color="#0876e8"/></linearGradient></defs>
+<circle cx="80" cy="80" r="74" fill="url(#b)" stroke="#fff" stroke-width="5"/>
+<path d="M80 136V54M80 74L51 49M80 87l32-30M80 101L39 78M80 104l44-28M80 62l2-25M80 116l-24 25M80 116l27 25" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+<g fill="#ff9518"><circle cx="51" cy="49" r="8"/><circle cx="112" cy="57" r="8"/><circle cx="39" cy="78" r="8"/><circle cx="124" cy="76" r="8"/><circle cx="82" cy="37" r="8"/></g>
+</svg>
