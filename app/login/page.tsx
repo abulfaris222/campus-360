@@ -6,9 +6,8 @@ import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [registerNumber, setRegisterNumber] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('student');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -17,15 +16,16 @@ export default function LoginPage() {
     setLoading(true);
     setMessage('');
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const loginEmail = `${registerNumber.trim().toLowerCase()}@campus.local`;
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
 
     if (error) {
-      setMessage(error.message);
+      setMessage('Invalid register number or password.');
       setLoading(false);
       return;
     }
 
-    router.push(role === 'admin' ? '/admin' : '/');
+    router.push('/');
   }
 
   return (
@@ -33,21 +33,31 @@ export default function LoginPage() {
       <section className="login-card">
         <div className="login-logo">SC</div>
         <h1>Welcome to Smart Campus 360</h1>
-        <p className="login-subtitle">Sign in to access your campus services.</p>
+        <p className="login-subtitle">Sign in using your register number and password.</p>
 
         <form onSubmit={handleLogin}>
-          <label>Account type</label>
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
-            <option value="student">Student</option>
-            <option value="faculty">Faculty / Staff</option>
-            <option value="admin">Admin</option>
-          </select>
+          <label htmlFor="register-number">Register number</label>
+          <input
+            id="register-number"
+            type="text"
+            inputMode="text"
+            autoComplete="username"
+            placeholder="Enter your register number"
+            value={registerNumber}
+            onChange={(e) => setRegisterNumber(e.target.value)}
+            required
+          />
 
-          <label>Email</label>
-          <input type="email" placeholder="you@college.edu" value={email} onChange={(e) => setEmail(e.target.value)} required />
-
-          <label>Password</label>
-          <input type="password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
           {message && <p className="login-error">{message}</p>}
 
@@ -56,7 +66,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="login-note">Your password is handled securely by Supabase Authentication.</p>
+        <p className="login-note">Use the register number issued by your college.</p>
       </section>
     </main>
   );
