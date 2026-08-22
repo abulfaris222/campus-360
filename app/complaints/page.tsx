@@ -80,7 +80,7 @@ export default function ComplaintsPage() {
     window.setTimeout(() => setSent(false), 4000);
   }
 
-  return <main className="module-page"><header className="module-header"><div><a className="back" href="/">← Dashboard</a><h1>Smart Complaints</h1><p>Report campus maintenance and facility issues and follow their progress.</p></div><div className="module-badge">📝</div></header>
+  return <main className="module-page"><header className="module-header"><div><a className="back" href="/" style={{display:'inline-flex',alignItems:'center',gap:8,padding:'9px 14px',borderRadius:12,background:'#fff',border:'1px solid #dfe7f1',boxShadow:'0 5px 16px rgba(23,42,70,.06)',fontSize:12,fontWeight:800,transition:'all .2s'}}>← <span>Dashboard</span></a><h1>Smart Complaints</h1><p>Report campus maintenance and facility issues and follow their progress.</p></div><div className="module-badge">📝</div></header>
     <div className="module-layout"><section className="card form-card"><h2>Create a complaint</h2><p className="muted">Give the campus team enough detail to act quickly.</p><form onSubmit={submit}>
       <label>Issue title<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g. Fan not working" required /></label>
       <div className="two-col"><label>Category<select value={category} onChange={e=>setCategory(e.target.value)}><option>Facilities</option><option>Electrical</option><option>Cleanliness</option><option>Network</option><option>Other</option></select></label><label>Location<input value={location} onChange={e=>setLocation(e.target.value)} placeholder="e.g. Block B" required /></label></div>
