@@ -14,6 +14,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body>
         <AuthGuard>{children}</AuthGuard>
+        <style dangerouslySetInnerHTML={{ __html: `.brand strong{font-size:0!important}.brand strong::after{content:"RIT Campus 360";font-size:15px;font-weight:800}.side-bottom b{font-size:0!important}.side-bottom b::after{content:"RIT Campus 360";font-size:12px;font-weight:800}` }} />
       </body>
     </html>
   );
