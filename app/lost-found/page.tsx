@@ -9,10 +9,14 @@ type Item = {
   place: string;
   kind: 'Lost' | 'Found';
   details: string | null;
-  status: 'Open' | 'Claimed';
+  photo_url: string | null;
+  status: 'Open' | 'Returned';
   created_at: string;
+  updated_at: string;
   user_id: string;
 };
+
+type LFMessage = { id: string; item_id: string; sender_id: string; recipient_id: string; body: string; created_at: string; read_at: string | null; item?: { item_name: string } | null };
 
 export default function LostFoundPage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -20,59 +24,103 @@ export default function LostFoundPage() {
   const [place, setPlace] = useState('');
   const [kind, setKind] = useState<'Lost' | 'Found'>('Lost');
   const [details, setDetails] = useState('');
+  const [photo, setPhoto] = useState<File | null>(null);
   const [filter, setFilter] = useState<'All' | 'Lost' | 'Found'>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Open' | 'Returned'>('All');
   const [search, setSearch] = useState('');
   const [userId, setUserId] = useState('');
+  const [editing, setEditing] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [contactItem, setContactItem] = useState<Item | null>(null);
+  const [contactText, setContactText] = useState('');
+  const [messages, setMessages] = useState<LFMessage[]>([]);
+  const [showInbox, setShowInbox] = useState(false);
 
   async function loadItems() {
-    const { data, error } = await supabase.from('lost_found_items').select('id,item_name,place,kind,details,status,created_at,user_id').order('created_at', { ascending: false });
-    if (error) setMessage(`Could not load posts: ${error.message}`);
-    else setItems((data ?? []) as Item[]);
+    const { data, error } = await supabase.from('lost_found_items').select('id,item_name,place,kind,details,photo_url,status,created_at,updated_at,user_id').order('created_at', { ascending: false });
+    if (error) setMessage(`Could not load posts: ${error.message}`); else setItems((data ?? []) as Item[]);
     setLoading(false);
+  }
+
+  async function loadMessages() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase.from('lost_found_messages').select('id,item_id,sender_id,recipient_id,body,created_at,read_at,item:lost_found_items(item_name)').or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).order('created_at', { ascending: false });
+    setMessages((data ?? []) as LFMessage[]);
   }
 
   useEffect(() => {
     async function start() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setUserId(user.id);
-      await loadItems();
+      await loadItems(); await loadMessages();
     }
     start();
   }, []);
 
+  function resetForm() { setEditing(null); setItem(''); setPlace(''); setDetails(''); setKind('Lost'); setPhoto(null); }
+
+  async function uploadPhoto(file: File) {
+    if (!userId) return null;
+    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) { setMessage('Please choose an image up to 5 MB.'); return null; }
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from('lost-found').upload(path, file, { upsert: false });
+    if (error) { setMessage(`Photo upload failed: ${error.message}`); return null; }
+    const { data } = supabase.storage.from('lost-found').getPublicUrl(path);
+    return data.publicUrl;
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!userId || !item.trim() || !place.trim()) return;
-    setSaving(true);
-    setMessage('');
-    const { data, error } = await supabase.from('lost_found_items').insert({ user_id: userId, item_name: item.trim(), place: place.trim(), kind, details: details.trim() || null }).select().single();
-    if (error) setMessage(`Could not publish post: ${error.message}`);
-    else {
-      setItems([data as Item, ...items]);
-      setItem(''); setPlace(''); setDetails(''); setKind('Lost');
-      setMessage('Post published successfully.');
-    }
+    setSaving(true); setMessage('');
+    let photoUrl = editing?.photo_url ?? null;
+    if (photo) photoUrl = await uploadPhoto(photo);
+    if (photo && !photoUrl) { setSaving(false); return; }
+    const payload = { item_name: item.trim(), place: place.trim(), kind, details: details.trim() || null, photo_url: photoUrl, updated_at: new Date().toISOString() };
+    const result = editing
+      ? await supabase.from('lost_found_items').update(payload).eq('id', editing.id).eq('user_id', userId).select().single()
+      : await supabase.from('lost_found_items').insert({ ...payload, user_id: userId, status: 'Open' }).select().single();
+    if (result.error) setMessage(`Could not save post: ${result.error.message}`);
+    else { resetForm(); await loadItems(); setMessage(editing ? 'Post updated successfully.' : 'Post published successfully.'); }
     setSaving(false);
   }
 
-  async function markClaimed(id: string) {
-    const { error } = await supabase.from('lost_found_items').update({ status: 'Claimed' }).eq('id', id).eq('user_id', userId);
-    if (error) setMessage(`Could not update post: ${error.message}`);
-    else setItems(items.map(x => x.id === id ? { ...x, status: 'Claimed' } : x));
+  async function setReturned(id: string, status: 'Open' | 'Returned') {
+    const { error } = await supabase.from('lost_found_items').update({ status, updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', userId);
+    if (error) setMessage(`Could not update post: ${error.message}`); else setItems(items.map(x => x.id === id ? { ...x, status } : x));
   }
 
   async function deletePost(id: string) {
+    if (!confirm('Delete this Lost & Found post?')) return;
     const { error } = await supabase.from('lost_found_items').delete().eq('id', id).eq('user_id', userId);
-    if (error) setMessage(`Could not delete post: ${error.message}`);
-    else setItems(items.filter(x => x.id !== id));
+    if (error) setMessage(`Could not delete post: ${error.message}`); else setItems(items.filter(x => x.id !== id));
   }
 
-  const visible = useMemo(() => items.filter(x => (filter === 'All' || x.kind === filter) && `${x.item_name} ${x.place} ${x.details ?? ''}`.toLowerCase().includes(search.toLowerCase())), [items, filter, search]);
+  async function sendContact(e: FormEvent) {
+    e.preventDefault(); if (!contactItem || !contactText.trim()) return;
+    const { error } = await supabase.from('lost_found_messages').insert({ item_id: contactItem.id, sender_id: userId, recipient_id: contactItem.user_id, body: contactText.trim() });
+    if (error) setMessage(`Could not send message: ${error.message}`); else { setContactText(''); setContactItem(null); setMessage('Message sent securely to the post owner.'); await loadMessages(); }
+  }
+
+  async function markRead(id: string) {
+    await supabase.from('lost_found_messages').update({ read_at: new Date().toISOString() }).eq('id', id).eq('recipient_id', userId);
+    await loadMessages();
+  }
+
+  function startEdit(x: Item) { setEditing(x); setItem(x.item_name); setPlace(x.place); setKind(x.kind); setDetails(x.details ?? ''); setPhoto(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+  const visible = useMemo(() => items.filter(x => (filter === 'All' || x.kind === filter) && (statusFilter === 'All' || x.status === statusFilter) && `${x.item_name} ${x.place} ${x.details ?? ''}`.toLowerCase().includes(search.toLowerCase())), [items, filter, statusFilter, search]);
+  const unread = messages.filter(m => m.recipient_id === userId && !m.read_at).length;
 
   return <main className="module-page"><header className="module-header"><div><a className="back" href="/">← Dashboard</a><h1>Lost & Found</h1><p>Post lost or found items and help return them to their owners.</p></div><div className="module-badge">🔎</div></header>
-    <div className="module-layout"><section className="card form-card"><h2>Post an item</h2><form onSubmit={submit}><label>Item name<input value={item} onChange={e=>setItem(e.target.value)} placeholder="e.g. Black scientific calculator" required /></label><label>Where was it seen?<input value={place} onChange={e=>setPlace(e.target.value)} placeholder="e.g. Library" required /></label><label>Post type<select value={kind} onChange={e=>setKind(e.target.value as 'Lost' | 'Found')}><option>Lost</option><option>Found</option></select></label><label>Details<textarea value={details} onChange={e=>setDetails(e.target.value)} placeholder="Add useful identifying details..." rows={4} /></label><button className="primary-btn" disabled={saving}>{saving ? 'Publishing...' : 'Publish post'}</button></form>{message && <p className="muted" style={{marginTop:12}}>{message}</p>}</section>
-    <section className="card"><div className="section-title" style={{marginTop:0}}><h2>Recent posts</h2><span>{visible.length} items</span></div><div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search item or place" /><select value={filter} onChange={e=>setFilter(e.target.value as 'All' | 'Lost' | 'Found')}><option>All</option><option>Lost</option><option>Found</option></select></div>{loading ? <div className="empty-state">Loading posts...</div> : visible.map(x=><div className="report-row" key={x.id}><div><b>{x.kind}: {x.item_name}</b><p>{x.place} • {new Date(x.created_at).toLocaleString('en-IN')}</p>{x.details && <small>{x.details}</small>}</div><div style={{display:'flex',gap:8,alignItems:'center'}}><span className={'status '+(x.status === 'Claimed' ? 'resolved' : 'submitted')}>{x.status}</span>{x.user_id === userId && x.status === 'Open' && <button className="secondary-btn" onClick={()=>markClaimed(x.id)}>Mark claimed</button>}{x.user_id === userId && <button className="secondary-btn" onClick={()=>deletePost(x.id)}>Delete</button>}</div></div>)}{!loading && !visible.length && <div className="empty-state">No matching posts yet.</div>}</section></div></main>;
+    <div style={{display:'flex',gap:10,justifyContent:'flex-end',marginBottom:16}}><button className="secondary-btn" onClick={()=>setShowInbox(!showInbox)}>💬 Messages {unread > 0 && `(${unread})`}</button></div>
+    <div className="module-layout"><section className="card form-card"><h2>{editing ? 'Edit post' : 'Post an item'}</h2><form onSubmit={submit}><label>Item name<input value={item} onChange={e=>setItem(e.target.value)} placeholder="e.g. Black scientific calculator" required /></label><label>Where was it seen?<input value={place} onChange={e=>setPlace(e.target.value)} placeholder="e.g. Library" required /></label><label>Post type<select value={kind} onChange={e=>setKind(e.target.value as 'Lost' | 'Found')}><option>Lost</option><option>Found</option></select></label><label>Details<textarea value={details} onChange={e=>setDetails(e.target.value)} placeholder="Add useful identifying details..." rows={4} /></label><label>Photo <input type="file" accept="image/*" onChange={e=>setPhoto(e.target.files?.[0] ?? null)} /><small>Optional • JPG/PNG/WebP • max 5 MB</small></label><div style={{display:'flex',gap:8}}><button className="primary-btn" disabled={saving}>{saving ? 'Saving...' : editing ? 'Save changes' : 'Publish post'}</button>{editing && <button className="secondary-btn" type="button" onClick={resetForm}>Cancel</button>}</div></form>{message && <p className="muted" style={{marginTop:12}}>{message}</p>}</section>
+    <section className="card"><div className="section-title" style={{marginTop:0}}><h2>Recent posts</h2><span>{visible.length} items</span></div><div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search item or place" /><select value={filter} onChange={e=>setFilter(e.target.value as 'All' | 'Lost' | 'Found')}><option>All</option><option>Lost</option><option>Found</option></select><select value={statusFilter} onChange={e=>setStatusFilter(e.target.value as 'All' | 'Open' | 'Returned')}><option>All</option><option>Open</option><option>Returned</option></select></div>{loading ? <div className="empty-state">Loading posts...</div> : visible.map(x=><div className="report-row" key={x.id}><div style={{display:'flex',gap:14,alignItems:'center'}}>{x.photo_url ? <img src={x.photo_url} alt="" style={{width:72,height:72,objectFit:'cover',borderRadius:12}} /> : <div style={{width:72,height:72,borderRadius:12,display:'grid',placeItems:'center',background:'rgba(0,0,0,.05)',fontSize:28}}>🔎</div>}<div><b>{x.kind}: {x.item_name}</b><p>{x.place} • {new Date(x.created_at).toLocaleString('en-IN')}</p>{x.details && <small>{x.details}</small>}</div></div><div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end'}}><span className={'status '+(x.status === 'Returned' ? 'resolved' : 'submitted')}>{x.status}</span>{x.user_id === userId ? <>{x.status === 'Open' && <button className="secondary-btn" onClick={()=>setReturned(x.id,'Returned')}>Mark returned</button>}{x.status === 'Returned' && <button className="secondary-btn" onClick={()=>setReturned(x.id,'Open')}>Reopen</button>}<button className="secondary-btn" onClick={()=>startEdit(x)}>Edit</button><button className="secondary-btn" onClick={()=>deletePost(x.id)}>Delete</button></> : x.status === 'Open' && <button className="secondary-btn" onClick={()=>setContactItem(x)}>Contact poster</button>}</div></div>)}{!loading && !visible.length && <div className="empty-state">No matching posts yet.</div>}</section></div>
+    {contactItem && <section className="card" style={{marginTop:20,padding:22}}><div className="section-title" style={{marginTop:0}}><h2>Contact poster</h2><button onClick={()=>setContactItem(null)}>✕ Close</button></div><p>About: <b>{contactItem.item_name}</b></p><form onSubmit={sendContact} style={{display:'grid',gap:10,maxWidth:650}}><textarea required maxLength={1000} rows={4} value={contactText} onChange={e=>setContactText(e.target.value)} placeholder="Share useful information about this item..." /><button className="primary-btn">Send message</button></form></section>}
+    {showInbox && <section className="card" style={{marginTop:20,padding:22}}><div className="section-title" style={{marginTop:0}}><h2>💬 Messages</h2><button onClick={()=>setShowInbox(false)}>✕ Close</button></div>{messages.length === 0 ? <div className="empty-state">No messages yet.</div> : <div style={{display:'grid',gap:10}}>{messages.map(m=><div key={m.id} className="card" style={{padding:14,border:m.recipient_id===userId&&!m.read_at?'2px solid #2563eb':undefined}}><b>{m.item?.item_name || 'Lost & Found item'}</b><p>{m.body}</p><small>{new Date(m.created_at).toLocaleString('en-IN')}</small>{m.recipient_id===userId&&!m.read_at&&<div><button className="quick-link" onClick={()=>markRead(m.id)}>Mark as read</button></div>}</div>)}</div>}</section>}
+  </main>;
 }
