@@ -43,9 +43,11 @@ create table if not exists public.marketplace_messages (
   recipient_id uuid not null references auth.users(id) on delete cascade,
   body text not null check (char_length(trim(body)) between 1 and 1000),
   created_at timestamptz not null default now(),
+  read_at timestamptz,
   check (sender_id <> recipient_id)
 );
 
+alter table public.marketplace_messages add column if not exists read_at timestamptz;
 alter table public.marketplace_messages enable row level security;
 
 drop policy if exists "Users can view their marketplace messages" on public.marketplace_messages;
@@ -58,6 +60,13 @@ create policy "Users can send marketplace messages"
 on public.marketplace_messages for insert to authenticated
 with check (auth.uid() = sender_id and sender_id <> recipient_id);
 
+drop policy if exists "Recipients can mark marketplace messages as read" on public.marketplace_messages;
+create policy "Recipients can mark marketplace messages as read"
+on public.marketplace_messages for update to authenticated
+using (auth.uid() = recipient_id)
+with check (auth.uid() = recipient_id);
+
 create index if not exists marketplace_listings_created_at_idx on public.marketplace_listings(created_at desc);
 create index if not exists marketplace_listings_category_idx on public.marketplace_listings(category);
 create index if not exists marketplace_messages_listing_idx on public.marketplace_messages(listing_id, created_at desc);
+create index if not exists marketplace_messages_recipient_read_idx on public.marketplace_messages(recipient_id, read_at, created_at desc);
