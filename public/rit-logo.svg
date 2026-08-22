@@ -1,1 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 240" role="img" aria-label="RIT Rajalakshmi Institute of Technology logo"><image href="data:image/webp;base64,UklGRlQRAABXRUJQVlA4WAoAAAAQAAAACwAACwAAQUxQSDIAAAARL6CobSMQhG2A8Q8iQ5uYwJYhQ3mM0s7s4V0i8j2kq8r8h5X4p3p8w8f8e6e7d5b5a4a3a2a1" width="720" height="240" preserveAspectRatio="xMidYMid meet"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220" role="img" aria-label="RIT Rajalakshmi Institute of Technology logo">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06182d"/><stop offset="1" stop-color="#102e55"/></linearGradient><linearGradient id="orb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4cc7ff"/><stop offset="1" stop-color="#0876e8"/></linearGradient></defs>
+<rect width="720" height="220" rx="24" fill="url(#bg)"/>
+<circle cx="105" cy="98" r="70" fill="url(#orb)" stroke="#fff" stroke-width="5"/>
+<path d="M105 160V72M105 92L77 67M105 104l31-29M105 118l-40-22M105 120l43-28M105 80l2-28M105 139l-23 22M105 139l25 21" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+<g fill="#ff9518"><circle cx="77" cy="67" r="7"/><circle cx="136" cy="75" r="7"/><circle cx="65" cy="96" r="7"/><circle cx="148" cy="92" r="7"/><circle cx="107" cy="52" r="7"/></g>
+<text x="205" y="105" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="88" font-weight="800">rit</text>
+<rect x="350" y="38" width="5" height="130" fill="#ff9518"/>
+<text x="378" y="70" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="800">RAJALAKSHMI</text>
+<text x="378" y="108" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="26" letter-spacing="5">INSTITUTE OF</text>
+<text x="378" y="144" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="26" letter-spacing="4">TECHNOLOGY</text>
+<text x="205" y="180" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="13" letter-spacing="4">BELIEVE IN THE POSSIBILITIES</text>
+<text x="205" y="201" fill="#cdd8e8" font-family="Arial,Helvetica,sans-serif" font-size="9" letter-spacing="3">(AN AUTONOMOUS INSTITUTION)</text>
+</svg>
