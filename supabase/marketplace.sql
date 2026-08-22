@@ -10,6 +10,7 @@ create table if not exists public.marketplace_listings (
   condition text not null check (condition in ('Like new', 'Good', 'Used')),
   category text not null check (category in ('Calculators', 'Books', 'Lab & Drawing', 'Bags', 'Electronics')),
   description text,
+  photo_url text,
   status text not null default 'Available' check (status in ('Available', 'Sold')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -17,6 +18,7 @@ create table if not exists public.marketplace_listings (
 
 alter table public.marketplace_listings add column if not exists status text not null default 'Available';
 alter table public.marketplace_listings add column if not exists updated_at timestamptz not null default now();
+alter table public.marketplace_listings add column if not exists photo_url text;
 
 alter table public.marketplace_listings drop constraint if exists marketplace_listings_status_check;
 alter table public.marketplace_listings add constraint marketplace_listings_status_check check (status in ('Available', 'Sold'));
@@ -43,6 +45,44 @@ drop policy if exists "Users can delete their own marketplace listings" on publi
 create policy "Users can delete their own marketplace listings"
 on public.marketplace_listings for delete to authenticated
 using (auth.uid() = seller_id);
+
+-- Public image bucket: anyone can view a listing photo, but only signed-in users can upload.
+insert into storage.buckets (id, name, public)
+values ('marketplace', 'marketplace', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "Marketplace images are publicly viewable" on storage.objects;
+create policy "Marketplace images are publicly viewable"
+on storage.objects for select
+using (bucket_id = 'marketplace');
+
+drop policy if exists "Users can upload marketplace images" on storage.objects;
+create policy "Users can upload marketplace images"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'marketplace'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Users can update marketplace images" on storage.objects;
+create policy "Users can update marketplace images"
+on storage.objects for update to authenticated
+using (
+  bucket_id = 'marketplace'
+  and (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'marketplace'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Users can delete marketplace images" on storage.objects;
+create policy "Users can delete marketplace images"
+on storage.objects for delete to authenticated
+using (
+  bucket_id = 'marketplace'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
 
 create table if not exists public.marketplace_messages (
   id uuid primary key default gen_random_uuid(),
