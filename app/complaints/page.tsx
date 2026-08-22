@@ -27,8 +27,9 @@ export default function ComplaintsPage() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
+  const [role, setRole] = useState<'student' | 'staff' | 'admin'>('student');
 
-  async function loadComplaints() {
+  async function loadComplaints(currentRole = role) {
     setLoading(true);
     const { data, error } = await supabase
       .from('complaints')
@@ -36,7 +37,7 @@ export default function ComplaintsPage() {
       .order('created_at', { ascending: false });
 
     if (error) {
-      setItems(starter);
+      setItems(currentRole === 'student' ? starter : []);
       setNotice('Run supabase/complaints.sql in Supabase SQL Editor to enable saved complaints.');
     } else {
       setItems((data ?? []) as Complaint[]);
@@ -46,7 +47,18 @@ export default function ComplaintsPage() {
   }
 
   useEffect(() => {
-    loadComplaints();
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+        const currentRole = (profile?.role ?? 'student') as 'student' | 'staff' | 'admin';
+        setRole(currentRole);
+        await loadComplaints(currentRole);
+      } else {
+        await loadComplaints('student');
+      }
+    }
+    init();
   }, []);
 
   async function submit(e: FormEvent) {
@@ -76,9 +88,20 @@ export default function ComplaintsPage() {
     setLocation('');
     setDetails('');
     setSent(true);
-    await loadComplaints();
+    await loadComplaints(role);
     window.setTimeout(() => setSent(false), 4000);
   }
+
+  async function updateStatus(id: string, status: Complaint['status']) {
+    const { error } = await supabase.from('complaints').update({ status }).eq('id', id);
+    if (error) {
+      setNotice(`Could not update complaint: ${error.message}`);
+      return;
+    }
+    setItems(items.map(item => item.id === id ? { ...item, status } : item));
+  }
+
+  const canManage = role === 'staff' || role === 'admin';
 
   return <main className="module-page"><header className="module-header"><div><a className="back" href="/" style={{display:'inline-flex',alignItems:'center',gap:8,padding:'9px 14px',borderRadius:12,background:'#fff',border:'1px solid #dfe7f1',boxShadow:'0 5px 16px rgba(23,42,70,.06)',fontSize:12,fontWeight:800,transition:'all .2s'}}>← <span>Dashboard</span></a><h1>Smart Complaints</h1><p>Report campus maintenance and facility issues and follow their progress.</p></div><div className="module-badge">📝</div></header>
     <div className="module-layout"><section className="card form-card"><h2>Create a complaint</h2><p className="muted">Give the campus team enough detail to act quickly.</p><form className="complaint-form" onSubmit={submit}>
@@ -86,5 +109,5 @@ export default function ComplaintsPage() {
       <div className="two-col"><label>Category<select value={category} onChange={e=>setCategory(e.target.value)}><option>Facilities</option><option>Electrical</option><option>Cleanliness</option><option>Network</option><option>Other</option></select></label><label>Location<input value={location} onChange={e=>setLocation(e.target.value)} placeholder="e.g. Block B" required /></label></div>
       <label>Details<textarea value={details} onChange={e=>setDetails(e.target.value)} placeholder="Describe the issue briefly..." rows={5}/></label>
       <button className="primary-btn" type="submit">Submit complaint</button>{sent && <p className="success-msg">Complaint submitted successfully.</p>}{notice && <p className="muted" style={{marginTop:10}}>{notice}</p>}
-    </form></section><section><div className="card"><div className="section-title" style={{marginTop:0}}><h2>My complaints</h2><span>{loading ? 'Loading...' : `${items.length} reports`}</span></div>{items.map(item=><div className="report-row" key={item.id}><div><b>{item.title}</b><p>{item.category} • {item.location}</p><small>{new Date(item.created_at).toLocaleString('en-IN')}</small></div><span className={'status '+item.status.toLowerCase().replaceAll(' ','-')}>{item.status}</span></div>)}{!loading && !items.length && <div className="empty-state">No complaints submitted yet.</div>}</div></section></div></main>;
+    </form></section><section><div className="card"><div className="section-title" style={{marginTop:0}}><div><h2>{canManage ? 'Campus complaints' : 'My complaints'}</h2>{canManage && <span>Staff and admin can review and update complaint status.</span>}</div><span>{loading ? 'Loading...' : `${items.length} reports`}</span></div>{items.map(item=><div className="report-row" key={item.id}><div><b>{item.title}</b><p>{item.category} • {item.location}</p>{item.details && <p className="muted">{item.details}</p>}<small>{new Date(item.created_at).toLocaleString('en-IN')}</small></div><span className={'status '+item.status.toLowerCase().replaceAll(' ','-')}>{item.status}</span>{canManage && <select value={item.status} onChange={e=>updateStatus(item.id, e.target.value as Complaint['status'])}><option>Submitted</option><option>In Progress</option><option>Resolved</option></select>}</div>)}{!loading && !items.length && <div className="empty-state">No complaints yet.</div>}</div></section></div></main>;
 }
