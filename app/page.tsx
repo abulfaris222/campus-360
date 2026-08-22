@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+
+const VISIT_KEY = 'smart-campus-360-logged-in';
 
 const modules = [
   ['📝', 'Smart Complaints', 'Report maintenance, facilities, or campus issues.', '/complaints'],
@@ -16,9 +19,11 @@ const activities = [['New complaint submitted','Library — broken study-room li
 type Notification = { id: string; title: string; text: string; href: string; created_at: string };
 
 export default function Home(){
+  const router = useRouter();
   const [profile, setProfile] = useState<{ register_number: string; role: string } | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -51,12 +56,20 @@ export default function Home(){
     return () => { active = false; };
   }, []);
 
+  async function handleLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    sessionStorage.removeItem(VISIT_KEY);
+    await supabase.auth.signOut();
+    router.replace('/login');
+  }
+
   const roleLabel = profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : 'Loading...';
 
   return <div className="shell">
     <aside className="sidebar">
       <div className="brand"><div className="logo">SC</div><div><strong>Smart Campus</strong><span>360 • Campus Portal</span></div></div>
-      <nav className="nav"><a className="active" href="/"><span>⌂</span> Dashboard</a><a href="/complaints"><span>📝</span> Complaints</a><a href="/marketplace"><span>🛒</span> Marketplace</a><a href="/lost-found"><span>🔎</span> Lost & Found</a><a href="/study-hub"><span>📚</span> Study Hub</a><a href="/admin"><span>🛡️</span> Admin</a><a href="/login"><span>↪</span> Sign in</a></nav>
+      <nav className="nav"><a className="active" href="/"><span>⌂</span> Dashboard</a><a href="/complaints"><span>📝</span> Complaints</a><a href="/marketplace"><span>🛒</span> Marketplace</a><a href="/lost-found"><span>🔎</span> Lost & Found</a><a href="/study-hub"><span>📚</span> Study Hub</a><a href="/admin"><span>🛡️</span> Admin</a></nav>
       <div className="side-bottom"><b>Smart Campus 360</b><p>A connected campus experience built with free-first tools.</p></div>
     </aside>
     <main className="main">
@@ -71,6 +84,7 @@ export default function Home(){
             </div>}
           </div>
           <div className="user-chip"><span className="user-avatar">👤</span><span><b>{profile?.register_number ?? 'Loading...'}</b><small>{roleLabel}</small></span></div>
+          <button className="logout-btn" onClick={handleLogout} disabled={loggingOut} aria-label="Log out">{loggingOut ? 'Signing out...' : '↪ Log out'}</button>
         </div>
       </header>
       <section className="content">
