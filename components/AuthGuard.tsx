@@ -14,6 +14,22 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
+    async function applyRoleVisibility(userId: string | null) {
+      if (!userId) {
+        document.body.classList.remove('admin-user');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (!mounted) return;
+      document.body.classList.toggle('admin-user', profile?.role === 'admin');
+    }
+
     async function checkSession() {
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
@@ -21,6 +37,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       const loggedInForThisVisit = sessionStorage.getItem(VISIT_KEY) === 'true';
 
       if (pathname === '/login') {
+        document.body.classList.remove('admin-user');
         if (data.session && loggedInForThisVisit) {
           router.replace('/');
           return;
@@ -30,6 +47,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       }
 
       if (!data.session || !loggedInForThisVisit) {
+        document.body.classList.remove('admin-user');
         if (data.session && !loggedInForThisVisit) {
           await supabase.auth.signOut();
         }
@@ -37,6 +55,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      await applyRoleVisibility(data.session.user.id);
       setChecking(false);
     }
 
@@ -47,8 +66,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
       const loggedInForThisVisit = sessionStorage.getItem(VISIT_KEY) === 'true';
 
-      if (!session && pathname !== '/login') {
-        router.replace('/login');
+      if (!session) {
+        document.body.classList.remove('admin-user');
+        if (pathname !== '/login') router.replace('/login');
+        setChecking(false);
         return;
       }
 
@@ -57,12 +78,19 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (loggedInForThisVisit) {
+        await applyRoleVisibility(session.user.id);
+      } else {
+        document.body.classList.remove('admin-user');
+      }
+
       setChecking(false);
     });
 
     return () => {
       mounted = false;
       listener.subscription.unsubscribe();
+      document.body.classList.remove('admin-user');
     };
   }, [pathname, router]);
 
@@ -74,5 +102,14 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <style>{`
+        body:not(.admin-user) a[href="/admin"] {
+          display: none !important;
+        }
+      `}</style>
+      {children}
+    </>
+  );
 }
