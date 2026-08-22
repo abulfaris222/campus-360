@@ -91,7 +91,13 @@ export default function Marketplace() {
       .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
       .order('created_at', { ascending: false });
 
-    if (!error) setMessages((data ?? []) as Message[]);
+    if (!error) {
+      const normalizedMessages: Message[] = (data ?? []).map((row) => ({
+        ...row,
+        listing: Array.isArray(row.listing) ? row.listing[0] ?? null : row.listing,
+      }));
+      setMessages(normalizedMessages);
+    }
     setInboxLoading(false);
   }
 
