@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import './mobile.css';
 import AuthGuard from '../components/AuthGuard';
 
 export const metadata: Metadata = {
