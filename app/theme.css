@@ -1,0 +1,51 @@
+:root{
+  --campus-bg:#eef2ff;
+  --campus-bg-2:#e6ecff;
+  --campus-primary:#3158a8;
+  --campus-primary-dark:#24478d;
+  --campus-surface:#ffffff;
+  --campus-border:#d7def0;
+  --campus-text:#182642;
+  --campus-muted:#6f7d98;
+}
+
+html,body{background:linear-gradient(135deg,var(--campus-bg),var(--campus-bg-2)) !important;color:var(--campus-text)}
+
+.sidebar{background:rgba(244,246,255,.96) !important;border-right-color:var(--campus-border) !important;box-shadow:8px 0 30px rgba(49,88,168,.06)}
+
+.topbar{background:rgba(238,242,255,.88) !important;border-bottom-color:var(--campus-border) !important}
+
+.content,.module-page{background:transparent}
+
+.card,.form-card,.login-card,.admin-card,.notification-panel,.date,.user-chip,.notification-btn{background:rgba(255,255,255,.92) !important;border-color:var(--campus-border) !important}
+
+.side-bottom{background:#e7ecff !important}
+
+.nav a{color:#53627d}
+.nav a:hover,.nav a.active{background:#dce5ff !important;color:var(--campus-primary) !important}
+
+.logo,.login-logo,.signin-link,.login-button,.primary-btn,.signout-btn{background:var(--campus-primary) !important}
+.logo,.login-logo{box-shadow:0 10px 24px rgba(49,88,168,.22)}
+.signin-link:hover,.login-button:hover,.primary-btn:hover,.signout-btn:hover{background:var(--campus-primary-dark) !important}
+
+.icon,.module-badge,.user-avatar{background:#dfe7ff !important;color:var(--campus-primary) !important}
+.quick-link,.secondary-btn{background:#e5ebff !important;color:#29477f !important}
+.quick-link:hover,.secondary-btn:hover{background:#d8e2ff !important}
+
+.hero p,.module-header p,.muted,.brand span,.section-title span,.stat-top,.stat p,.module p,.activity-item p,.notification-item span,.notification-head span,.user-chip small{color:var(--campus-muted)}
+
+.back{color:var(--campus-primary) !important}
+
+.login-page,.admin-page{background:linear-gradient(135deg,#e8edff,#dfe7ff) !important}
+
+.status,.resource-type{background:#e1e9ff !important;color:#3158a8 !important}
+
+.scan-result{background:#e5ebff !important}
+
+input,select,textarea{border-color:#cfd8ec !important}
+input:focus,select:focus,textarea:focus{border-color:#6483c5 !important;box-shadow:0 0 0 3px rgba(100,131,197,.14) !important}
+
+@media(max-width:760px){
+  .sidebar{background:rgba(239,243,255,.98) !important}
+  .topbar{background:rgba(235,240,255,.94) !important}
+}
