@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 
+const VISIT_KEY = 'smart-campus-360-logged-in';
+
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -16,7 +18,21 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
 
-      if (!data.session && pathname !== '/login') {
+      const loggedInForThisVisit = sessionStorage.getItem(VISIT_KEY) === 'true';
+
+      if (pathname === '/login') {
+        if (data.session && loggedInForThisVisit) {
+          router.replace('/');
+          return;
+        }
+        setChecking(false);
+        return;
+      }
+
+      if (!data.session || !loggedInForThisVisit) {
+        if (data.session && !loggedInForThisVisit) {
+          await supabase.auth.signOut();
+        }
         router.replace('/login');
         return;
       }
@@ -26,15 +42,17 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
     checkSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
+
+      const loggedInForThisVisit = sessionStorage.getItem(VISIT_KEY) === 'true';
 
       if (!session && pathname !== '/login') {
         router.replace('/login');
         return;
       }
 
-      if (session && pathname === '/login') {
+      if (session && pathname === '/login' && loggedInForThisVisit) {
         router.replace('/');
         return;
       }
