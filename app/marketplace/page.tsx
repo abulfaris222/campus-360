@@ -323,7 +323,7 @@ export default function Marketplace() {
           {!loading && filtered.length === 0 && <div className="card" style={{ padding: 30, textAlign: 'center' }}>No items found. Try another search or category.</div>}
 
           {showSell && <div className="card" style={{ marginTop: 24, padding: 22 }}>
-            <div className="section-title" style={{ marginTop: 0 }}><h2>{editingId ? 'Modify your listing' : 'Sell an item'}</h2><button onClick={() => { setShowSell(false); resetForm(); }}>✕ Close</button></div>
+            <div className="section-title" style={{ marginTop: 0 }}><h2>{editingId ? 'Modify your listing' : 'Sell an item'}</h2><button className="modal-close-btn" aria-label="Close sell form" onClick={() => { setShowSell(false); resetForm(); }}><span aria-hidden="true">×</span><span>Close</span></button></div>
             <form onSubmit={addOrUpdateItem} style={{ display: 'grid', gap: 12, maxWidth: 600 }}>
               <input required placeholder="Item name" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
               <input required type="number" min="1" placeholder="Price in ₹" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
@@ -335,13 +335,13 @@ export default function Marketplace() {
           </div>}
 
           {showMessage && <div className="card" style={{ marginTop: 24, padding: 22 }}>
-            <div className="section-title" style={{ marginTop: 0 }}><h2>Message seller</h2><button onClick={() => setShowMessage(null)}>✕ Close</button></div>
+            <div className="section-title" style={{ marginTop: 0 }}><h2>Message seller</h2><button className="modal-close-btn" aria-label="Close message form" onClick={() => setShowMessage(null)}><span aria-hidden="true">×</span><span>Close</span></button></div>
             <p style={{ marginBottom: 12 }}>About: <b>{showMessage.title}</b></p>
             <form onSubmit={sendMessage} style={{ display: 'grid', gap: 12, maxWidth: 600 }}><textarea required maxLength={1000} placeholder="Ask about availability, condition, pickup on campus, etc." value={message} onChange={e => setMessage(e.target.value)} rows={5} /><button className="primary" type="submit">Send securely</button></form>
           </div>}
 
           {showInbox && <div className="card" style={{ marginTop: 24, padding: 22 }}>
-            <div className="section-title" style={{ marginTop: 0 }}><h2>💬 Marketplace Messages</h2><button onClick={() => setShowInbox(false)}>✕ Close</button></div>
+            <div className="section-title" style={{ marginTop: 0 }}><h2>💬 Marketplace Messages</h2><button className="modal-close-btn" aria-label="Close marketplace messages" onClick={() => setShowInbox(false)}><span aria-hidden="true">×</span><span>Close</span></button></div>
             <p style={{ marginBottom: 16 }}>Messages about items you are selling or items you have contacted a seller about.</p>
             {inboxLoading && <p>Loading messages...</p>}
             {!inboxLoading && messages.length === 0 && <div style={{ padding: 24, textAlign: 'center', borderRadius: 12, background: 'rgba(0,0,0,.03)' }}>No messages yet.</div>}
