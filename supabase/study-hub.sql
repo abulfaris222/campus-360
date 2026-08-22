@@ -39,3 +39,66 @@ using (exists (select 1 from public.profiles where id = auth.uid() and role in (
 
 create index if not exists study_materials_subject_idx on public.study_materials(subject, created_at desc);
 create index if not exists study_materials_created_idx on public.study_materials(created_at desc);
+
+-- Storage bucket for uploaded study files.
+-- Public download URLs let students open/download files without exposing upload permissions.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'study-materials',
+  'study-materials',
+  true,
+  52428800,
+  array[
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'text/csv',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'application/zip'
+  ]
+)
+on conflict (id) do update set
+  public = true,
+  file_size_limit = 52428800,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- Staff/admin can upload files. Files are stored under their auth user id.
+drop policy if exists "Staff and admins can upload study files" on storage.objects;
+create policy "Staff and admins can upload study files"
+on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'study-materials'
+  and (storage.foldername(name))[1] = auth.uid()::text
+  and exists (select 1 from public.profiles where id = auth.uid() and role in ('staff','admin'))
+);
+
+-- Staff/admin can replace or remove files they uploaded.
+drop policy if exists "Staff and admins can update study files" on storage.objects;
+create policy "Staff and admins can update study files"
+on storage.objects for update to authenticated
+using (
+  bucket_id = 'study-materials'
+  and (storage.foldername(name))[1] = auth.uid()::text
+  and exists (select 1 from public.profiles where id = auth.uid() and role in ('staff','admin'))
+)
+with check (
+  bucket_id = 'study-materials'
+  and (storage.foldername(name))[1] = auth.uid()::text
+  and exists (select 1 from public.profiles where id = auth.uid() and role in ('staff','admin'))
+);
+
+drop policy if exists "Staff and admins can delete study files" on storage.objects;
+create policy "Staff and admins can delete study files"
+on storage.objects for delete to authenticated
+using (
+  bucket_id = 'study-materials'
+  and (storage.foldername(name))[1] = auth.uid()::text
+  and exists (select 1 from public.profiles where id = auth.uid() and role in ('staff','admin'))
+);
