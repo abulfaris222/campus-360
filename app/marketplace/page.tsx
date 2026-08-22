@@ -14,6 +14,17 @@ type Listing = {
   created_at: string;
 };
 
+type Message = {
+  id: string;
+  listing_id: string;
+  sender_id: string;
+  recipient_id: string;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+  listing?: { title: string } | null;
+};
+
 const demoItems: Listing[] = [
   { id: 'demo-1', title: 'Scientific Calculator', price: 450, condition: 'Good', category: 'Calculators', description: 'Useful for engineering mathematics.', seller_id: '', created_at: new Date().toISOString() },
   { id: 'demo-2', title: 'Engineering Drawing Kit', price: 300, condition: 'Like new', category: 'Lab & Drawing', description: 'Complete drawing kit.', seller_id: '', created_at: new Date().toISOString() },
@@ -42,6 +53,9 @@ export default function Marketplace() {
   const [message, setMessage] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [showInbox, setShowInbox] = useState(false);
+  const [inboxLoading, setInboxLoading] = useState(false);
   const [form, setForm] = useState({ title: '', price: '', condition: 'Good' as Listing['condition'], category: 'Calculators', description: '' });
 
   async function loadListings() {
@@ -56,12 +70,39 @@ export default function Marketplace() {
     setLoading(false);
   }
 
-  useEffect(() => { loadListings(); }, []);
+  async function loadMessages() {
+    setInboxLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setMessages([]);
+      setInboxLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('marketplace_messages')
+      .select('id,listing_id,sender_id,recipient_id,body,created_at,read_at,listing:marketplace_listings(title)')
+      .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+      .order('created_at', { ascending: false });
+
+    if (!error) setMessages((data ?? []) as Message[]);
+    setInboxLoading(false);
+  }
+
+  useEffect(() => {
+    loadListings();
+    loadMessages();
+
+    const interval = window.setInterval(loadMessages, 10000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const filtered = useMemo(() => items.filter(item =>
     (category === 'All' || item.category === category) &&
     item.title.toLowerCase().includes(query.toLowerCase())
   ), [items, category, query]);
+
+  const unreadCount = messages.filter(m => m.recipient_id && !m.read_at).length;
 
   async function addItem(event: FormEvent) {
     event.preventDefault();
@@ -122,7 +163,28 @@ export default function Marketplace() {
     setMessage('');
     setShowMessage(null);
     setNotice('Message sent securely through your campus account.');
+    await loadMessages();
     setTimeout(() => setNotice(''), 4000);
+  }
+
+  async function openInbox() {
+    setShowInbox(true);
+    await loadMessages();
+  }
+
+  async function markRead(messageId: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('marketplace_messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('id', messageId)
+      .eq('recipient_id', user.id);
+
+    if (!error) {
+      setMessages(current => current.map(m => m.id === messageId ? { ...m, read_at: new Date().toISOString() } : m));
+    }
   }
 
   return (
@@ -143,7 +205,13 @@ export default function Marketplace() {
       <main className="main">
         <header className="topbar"><div className="crumb">Campus / <b>Marketplace</b></div><a className="signin-link" href="/login">Sign in <span>→</span></a></header>
         <section className="content">
-          <div className="hero"><div><h1>🛒 Campus Marketplace</h1><p>Useful things from seniors to juniors — at student-friendly prices.</p></div><button className="primary" onClick={() => setShowSell(true)}>＋ Sell an item</button></div>
+          <div className="hero">
+            <div><h1>🛒 Campus Marketplace</h1><p>Useful things from seniors to juniors — at student-friendly prices.</p></div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button className="quick-link" onClick={openInbox}>💬 Messages {unreadCount > 0 && <span style={{ marginLeft: 6, padding: '2px 7px', borderRadius: 999, background: '#ef4444', color: '#fff', fontSize: 12 }}>{unreadCount}</span>}</button>
+              <button className="primary" onClick={() => setShowSell(true)}>＋ Sell an item</button>
+            </div>
+          </div>
           {notice && <div className="card" style={{ marginBottom: 20, padding: 14 }}>ℹ️ {notice}</div>}
 
           <div className="card" style={{ padding: 18, marginBottom: 20 }}>
@@ -189,6 +257,33 @@ export default function Marketplace() {
               <textarea required maxLength={1000} placeholder="Ask about availability, condition, pickup on campus, etc." value={message} onChange={e => setMessage(e.target.value)} rows={5} />
               <button className="primary" type="submit">Send securely</button>
             </form>
+          </div>}
+
+          {showInbox && <div className="card" style={{ marginTop: 24, padding: 22 }}>
+            <div className="section-title" style={{ marginTop: 0 }}><h2>💬 Marketplace Messages</h2><button onClick={() => setShowInbox(false)}>✕ Close</button></div>
+            <p style={{ marginBottom: 16 }}>Messages about items you are selling or items you have contacted a seller about.</p>
+            {inboxLoading && <p>Loading messages...</p>}
+            {!inboxLoading && messages.length === 0 && <div style={{ padding: 24, textAlign: 'center', borderRadius: 12, background: 'rgba(0,0,0,.03)' }}>No messages yet.</div>}
+            <div style={{ display: 'grid', gap: 12 }}>
+              {messages.map(m => {
+                const incoming = m.recipient_id !== m.sender_id && !m.read_at;
+                return (
+                  <div key={m.id} className="card" style={{ padding: 16, border: incoming ? '2px solid #2563eb' : undefined }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+                      <div>
+                        <strong>{m.listing?.title || 'Marketplace item'}</strong>
+                        <p style={{ margin: '6px 0' }}>{m.body}</p>
+                        <small>{new Date(m.created_at).toLocaleString('en-IN')}</small>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700 }}>{m.recipient_id === m.sender_id ? 'MESSAGE' : 'MESSAGE'}</span>
+                        {incoming && <><br /><button className="quick-link" onClick={() => markRead(m.id)}>Mark as read</button></>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>}
         </section>
       </main>
