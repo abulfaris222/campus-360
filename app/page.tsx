@@ -20,7 +20,7 @@ export default function Home() {
       <aside className="sidebar">
         <div className="brand">
           <div className="logo">SC</div>
-          <div><strong>Smart Campus</strong><span>360 • Student Portal</span></div>
+          <div><strong>Smart Campus</strong><span>360 • Campus Portal</span></div>
         </div>
         <nav className="nav">
           <a className="active" href="#"><span>⌂</span> Dashboard</a>
@@ -29,7 +29,7 @@ export default function Home() {
           <a href="#modules"><span>♻️</span> WasteVision</a>
           <a href="#modules"><span>🔎</span> Lost & Found</a>
           <a href="#modules"><span>📚</span> Study Hub</a>
-          <a href="#admin"><span>🛡️</span> Admin</a>
+          <a href="/login"><span>↪</span> Sign in</a>
         </nav>
         <div className="side-bottom"><b>Smart Campus 360</b><p>A connected campus experience built with free-first tools.</p></div>
       </aside>
@@ -37,7 +37,7 @@ export default function Home() {
       <main className="main">
         <header className="topbar">
           <div className="crumb">Campus / <b>Dashboard</b></div>
-          <div className="profile"><div><b style={{fontSize: '12px'}}>Student</b><small>Welcome back</small></div><div className="avatar">ST</div></div>
+          <a className="signin-link" href="/login">Sign in <span>→</span></a>
         </header>
 
         <section className="content">
@@ -59,7 +59,7 @@ export default function Home() {
 
           <div className="activity">
             <div className="card"><div className="section-title" style={{marginTop:0}}><h2>Recent activity</h2><span>Live campus feed</span></div>{activities.map(([title, text, time]) => <div className="activity-item" key={title}><div className="dot"/><div><b>{title}</b><p>{text} • {time}</p></div></div>)}</div>
-            <div className="card quick" id="admin"><div className="section-title" style={{marginTop:0}}><h2>Quick actions</h2></div><button>🚨 Report an emergency</button><button className="secondary">📝 Create a complaint</button><button className="secondary">🔎 Post a lost item</button></div>
+            <div className="card quick"><div className="section-title" style={{marginTop:0}}><h2>Quick actions</h2></div><button>🚨 Report an emergency</button><button className="secondary">📝 Create a complaint</button><button className="secondary">🔎 Post a lost item</button></div>
           </div>
         </section>
       </main>
