@@ -1,51 +1,16 @@
-:root{
-  --campus-bg:#eef2ff;
-  --campus-bg-2:#e6ecff;
-  --campus-primary:#3158a8;
-  --campus-primary-dark:#24478d;
-  --campus-surface:#ffffff;
-  --campus-border:#d7def0;
-  --campus-text:#182642;
-  --campus-muted:#6f7d98;
-}
-
-html,body{background:linear-gradient(135deg,var(--campus-bg),var(--campus-bg-2)) !important;color:var(--campus-text)}
-
-.sidebar{background:rgba(244,246,255,.96) !important;border-right-color:var(--campus-border) !important;box-shadow:8px 0 30px rgba(49,88,168,.06)}
-
-.topbar{background:rgba(238,242,255,.88) !important;border-bottom-color:var(--campus-border) !important}
-
-.content,.module-page{background:transparent}
-
-.card,.form-card,.login-card,.admin-card,.notification-panel,.date,.user-chip,.notification-btn{background:rgba(255,255,255,.92) !important;border-color:var(--campus-border) !important}
-
-.side-bottom{background:#e7ecff !important}
-
-.nav a{color:#53627d}
-.nav a:hover,.nav a.active{background:#dce5ff !important;color:var(--campus-primary) !important}
-
-.logo,.login-logo,.signin-link,.login-button,.primary-btn,.signout-btn{background:var(--campus-primary) !important}
-.logo,.login-logo{box-shadow:0 10px 24px rgba(49,88,168,.22)}
-.signin-link:hover,.login-button:hover,.primary-btn:hover,.signout-btn:hover{background:var(--campus-primary-dark) !important}
-
-.icon,.module-badge,.user-avatar{background:#dfe7ff !important;color:var(--campus-primary) !important}
-.quick-link,.secondary-btn{background:#e5ebff !important;color:#29477f !important}
-.quick-link:hover,.secondary-btn:hover{background:#d8e2ff !important}
-
-.hero p,.module-header p,.muted,.brand span,.section-title span,.stat-top,.stat p,.module p,.activity-item p,.notification-item span,.notification-head span,.user-chip small{color:var(--campus-muted)}
-
-.back{color:var(--campus-primary) !important}
-
-.login-page,.admin-page{background:linear-gradient(135deg,#e8edff,#dfe7ff) !important}
-
-.status,.resource-type{background:#e1e9ff !important;color:#3158a8 !important}
-
-.scan-result{background:#e5ebff !important}
-
-input,select,textarea{border-color:#cfd8ec !important}
-input:focus,select:focus,textarea:focus{border-color:#6483c5 !important;box-shadow:0 0 0 3px rgba(100,131,197,.14) !important}
-
-@media(max-width:760px){
-  .sidebar{background:rgba(239,243,255,.98) !important}
-  .topbar{background:rgba(235,240,255,.94) !important}
-}
+:root{--campus-bg:#0b1220;--campus-bg-2:#111d30;--campus-primary:#22d3ee;--campus-primary-dark:#0891b2;--campus-surface:#111d30;--campus-border:#263750;--campus-text:#e8eef7;--campus-muted:#8fa0b8}
+html,body{background:radial-gradient(circle at 15% 0%,rgba(30,136,229,.14),transparent 32%),radial-gradient(circle at 85% 10%,rgba(20,184,166,.1),transparent 28%),var(--campus-bg)!important;color:var(--campus-text)}
+.sidebar{background:rgba(13,23,40,.97)!important;border-right-color:var(--campus-border)!important;box-shadow:8px 0 30px rgba(0,0,0,.18)}
+.topbar{background:rgba(11,18,32,.86)!important;border-bottom-color:var(--campus-border)!important;box-shadow:0 8px 25px rgba(0,0,0,.12)}
+.card,.form-card,.login-card,.admin-card,.notification-panel,.date,.user-chip,.notification-btn{background:rgba(17,29,48,.96)!important;border-color:var(--campus-border)!important;box-shadow:0 12px 35px rgba(0,0,0,.2)}
+.side-bottom{background:#111d30!important;border:1px solid #24344d}.brand strong,.hero h1,.module-header h1,.section-title h2,.module h3,.category-card h3,.resource-card h3,.form-card h2{color:#f4f8ff}.brand span,.hero p,.module-header p,.muted,.section-title span,.stat-top,.stat p,.module p,.activity-item p,.notification-item span,.notification-head span,.user-chip small{color:var(--campus-muted)}
+.nav a{color:#91a0b7}.nav a:hover,.nav a.active{background:linear-gradient(90deg,rgba(37,99,235,.2),rgba(6,182,212,.08))!important;color:#67e8f9!important;box-shadow:inset 3px 0 #22d3ee}
+.logo,.login-logo{background:linear-gradient(135deg,#2563eb,#06b6d4)!important;box-shadow:0 8px 24px rgba(6,182,212,.2)}
+.signin-link,.login-button,.primary-btn,.signout-btn{background:linear-gradient(135deg,#2563eb,#0891b2)!important;color:#fff}.signin-link:hover,.login-button:hover,.primary-btn:hover,.signout-btn:hover{background:linear-gradient(135deg,#1d4ed8,#0e7490)!important}
+.icon,.module-badge,.user-avatar{background:linear-gradient(135deg,rgba(37,99,235,.2),rgba(6,182,212,.13))!important;color:#67e8f9!important}.quick-link,.secondary-btn{background:#19283e!important;color:#cfe0f3!important}.quick-link:hover,.secondary-btn:hover{background:#213550!important}
+.notification-btn{color:#dce7f5}.notification-badge{background:#22c55e!important;border-color:#111d30!important;color:#06110b}.notification-item{border-bottom-color:#223149}.notification-item:hover{background:#17263d}.notification-item b{color:#dbe7f5}.notification-empty{color:#8292aa}.dot{background:#22d3ee}.activity-item,.report-row,.admin-row{border-bottom-color:#223149}.activity-item b,.report-row b,.admin-row b{color:#dce7f5}
+.login-page,.admin-page{background:radial-gradient(circle at 50% 0%,rgba(30,136,229,.18),transparent 42%),#0b1220!important}.login-subtitle,.login-note,.admin-card>p{color:#8fa0b8}.login-card label,.form-card label{color:#c9d7e8}.login-card input,.login-card select,.form-card input,.form-card select,.form-card textarea,.study-toolbar input{background:#0c1627!important;border-color:#2a3a52!important;color:#e8eef7!important}.login-card input::placeholder,.form-card input::placeholder,.form-card textarea::placeholder,.study-toolbar input::placeholder{color:#667892}.login-card input:focus,.form-card input:focus,.form-card select:focus,.form-card textarea:focus,.study-toolbar input:focus{border-color:#22d3ee!important;box-shadow:0 0 0 3px rgba(34,211,238,.12)!important}
+.status,.resource-type{background:rgba(37,99,235,.18)!important;color:#93c5fd!important}.status.resolved{background:rgba(34,197,94,.15)!important;color:#86efac!important}.status.in-progress{background:rgba(245,158,11,.15)!important;color:#fcd34d!important}.danger-btn{background:rgba(239,68,68,.12)!important;color:#fca5a5!important}.success-msg{background:rgba(34,197,94,.12)!important;color:#86efac!important}.admin-placeholder,.scan-result{background:#0d192b!important;border:1px solid #223149}.upload-btn{border-color:#2a3a52;background:#17263d;color:#cfe0f3}.upload-btn:hover{background:#203550}
+.back{display:inline-flex;align-items:center;gap:7px;background:#13243a!important;border:1px solid #2a3a52;color:#7dd3fc!important;padding:9px 13px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.14);transition:.2s}.back:hover{background:#1a304b!important;transform:translateY(-1px);color:#a5f3fc!important}
+input,select,textarea{color-scheme:dark}
+@media(max-width:760px){.sidebar{background:rgba(13,23,40,.99)!important}.topbar{background:rgba(11,18,32,.96)!important}.notification-panel{max-width:calc(100vw - 24px)}}
