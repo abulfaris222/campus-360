@@ -10,6 +10,7 @@ type Listing = {
   condition: 'Like new' | 'Good' | 'Used';
   category: string;
   description: string | null;
+  photo_url: string | null;
   seller_id: string;
   status: 'Available' | 'Sold';
   created_at: string;
@@ -28,12 +29,12 @@ type Message = {
 };
 
 const demoItems: Listing[] = [
-  { id: 'demo-1', title: 'Scientific Calculator', price: 450, condition: 'Good', category: 'Calculators', description: 'Useful for engineering mathematics.', seller_id: '', status: 'Available', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'demo-2', title: 'Engineering Drawing Kit', price: 300, condition: 'Like new', category: 'Lab & Drawing', description: 'Complete drawing kit.', seller_id: '', status: 'Available', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'demo-3', title: 'Engineering Mathematics Textbook', price: 250, condition: 'Good', category: 'Books', description: 'Good condition textbook.', seller_id: '', status: 'Available', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'demo-4', title: 'College Backpack', price: 500, condition: 'Good', category: 'Bags', description: 'College-use backpack.', seller_id: '', status: 'Available', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'demo-5', title: 'Digital Vernier Caliper', price: 650, condition: 'Good', category: 'Lab & Drawing', description: 'Digital vernier caliper.', seller_id: '', status: 'Available', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  { id: 'demo-6', title: 'USB Keyboard & Mouse', price: 350, condition: 'Good', category: 'Electronics', description: 'Keyboard and mouse set.', seller_id: '', status: 'Available', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'demo-1', title: 'Scientific Calculator', price: 450, condition: 'Good', category: 'Calculators', description: 'Useful for engineering mathematics.', photo_url: null, seller_id: '', status: 'Available', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'demo-2', title: 'Engineering Drawing Kit', price: 300, condition: 'Like new', category: 'Lab & Drawing', description: 'Complete drawing kit.', photo_url: null, seller_id: '', status: 'Available', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'demo-3', title: 'Engineering Mathematics Textbook', price: 250, condition: 'Good', category: 'Books', description: 'Good condition textbook.', photo_url: null, seller_id: '', status: 'Available', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'demo-4', title: 'College Backpack', price: 500, condition: 'Good', category: 'Bags', description: 'College-use backpack.', photo_url: null, seller_id: '', status: 'Available', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'demo-5', title: 'Digital Vernier Caliper', price: 650, condition: 'Good', category: 'Lab & Drawing', description: 'Digital vernier caliper.', photo_url: null, seller_id: '', status: 'Available', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'demo-6', title: 'USB Keyboard & Mouse', price: 350, condition: 'Good', category: 'Electronics', description: 'Keyboard and mouse set.', photo_url: null, seller_id: '', status: 'Available', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
 ];
 
 const categories = ['All', 'Calculators', 'Books', 'Lab & Drawing', 'Bags', 'Electronics'];
@@ -63,11 +64,14 @@ export default function Marketplace() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [replyFor, setReplyFor] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [isDraggingPhoto, setIsDraggingPhoto] = useState(false);
   const [form, setForm] = useState({ title: '', price: '', condition: 'Good' as Listing['condition'], category: 'Calculators', description: '' });
 
   async function loadListings() {
     setLoading(true);
-    const { data, error } = await supabase.from('marketplace_listings').select('id,title,price,condition,category,description,seller_id,status,created_at,updated_at').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('marketplace_listings').select('id,title,price,condition,category,description,photo_url,seller_id,status,created_at,updated_at').order('created_at', { ascending: false });
     if (error) {
       setItems(demoItems);
       setNotice('Connect the Marketplace database by running the updated supabase/marketplace.sql in Supabase SQL Editor.');
@@ -121,13 +125,43 @@ export default function Marketplace() {
   function resetForm() {
     setEditingId(null);
     setForm({ title: '', price: '', condition: 'Good', category: 'Calculators', description: '' });
+    setPhotoFile(null);
+    setPhotoPreview('');
+    setIsDraggingPhoto(false);
   }
 
   function startEdit(item: Listing) {
     setEditingId(item.id);
     setForm({ title: item.title, price: String(item.price), condition: item.condition, category: item.category, description: item.description ?? '' });
+    setPhotoFile(null);
+    setPhotoPreview(item.photo_url ?? '');
     setShowSell(true);
     setNotice('');
+  }
+
+  function choosePhoto(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setNotice('Please choose an image file such as JPG, PNG or WEBP.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setNotice('Photo must be 5 MB or smaller.');
+      return;
+    }
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    setNotice('');
+  }
+
+  async function uploadPhoto(userId: string) {
+    if (!photoFile) return photoPreview || null;
+    const extension = photoFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const path = `${userId}/${crypto.randomUUID()}.${extension}`;
+    const { error } = await supabase.storage.from('marketplace').upload(path, photoFile, { contentType: photoFile.type, upsert: false });
+    if (error) throw new Error(`Photo upload failed: ${error.message}`);
+    const { data } = supabase.storage.from('marketplace').getPublicUrl(path);
+    return data.publicUrl;
   }
 
   async function addOrUpdateItem(event: FormEvent) {
@@ -141,6 +175,14 @@ export default function Marketplace() {
       return;
     }
 
+    let photoUrl: string | null = photoPreview || null;
+    try {
+      photoUrl = await uploadPhoto(user.id);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not upload the photo.');
+      return;
+    }
+
     if (editingId) {
       const { error } = await supabase.from('marketplace_listings').update({
         title: form.title.trim(),
@@ -148,6 +190,7 @@ export default function Marketplace() {
         condition: form.condition,
         category: form.category,
         description: form.description.trim() || null,
+        photo_url: photoUrl,
         updated_at: new Date().toISOString(),
       }).eq('id', editingId).eq('seller_id', user.id);
       if (error) {
@@ -163,6 +206,7 @@ export default function Marketplace() {
         condition: form.condition,
         category: form.category,
         description: form.description.trim() || null,
+        photo_url: photoUrl,
       });
       if (error) {
         setNotice(`Could not post the item: ${error.message}`);
@@ -305,7 +349,7 @@ export default function Marketplace() {
               const mine = item.seller_id === currentUserId;
               return (
                 <div className="card module" key={item.id} style={{ opacity: item.status === 'Sold' ? 0.72 : 1 }}>
-                  <div className="icon" style={{ fontSize: 34 }}>{itemEmoji(item.category)}</div>
+                  {item.photo_url ? <img src={item.photo_url} alt={item.title} style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 16, border: '1px solid #d7e5f5', flexShrink: 0 }} /> : <div className="icon" style={{ fontSize: 34 }}>{itemEmoji(item.category)}</div>}
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><h3 style={{ margin: 0 }}>{item.title}</h3><span className="resource-type" style={{ color: item.status === 'Sold' ? '#b91c1c' : '#166534' }}>{item.status}</span>{mine && <span className="resource-type">Your listing</span>}</div>
                     <p>{item.condition} • {item.category}</p>
@@ -329,6 +373,18 @@ export default function Marketplace() {
               <input required type="number" min="1" placeholder="Price in ₹" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
               <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>{categories.slice(1).map(c => <option key={c}>{c}</option>)}</select>
               <select value={form.condition} onChange={e => setForm({ ...form, condition: e.target.value as Listing['condition'] })}><option>Like new</option><option>Good</option><option>Used</option></select>
+
+              <div
+                onDragOver={e => { e.preventDefault(); setIsDraggingPhoto(true); }}
+                onDragLeave={() => setIsDraggingPhoto(false)}
+                onDrop={e => { e.preventDefault(); setIsDraggingPhoto(false); choosePhoto(e.dataTransfer.files?.[0]); }}
+                onClick={() => document.getElementById('marketplace-photo-input')?.click()}
+                style={{ border: `2px dashed ${isDraggingPhoto ? '#1677ff' : '#b9d5f5'}`, borderRadius: 16, padding: 18, textAlign: 'center', background: isDraggingPhoto ? '#eaf4ff' : '#f7fbff', cursor: 'pointer', transition: 'all .2s' }}
+              >
+                <input id="marketplace-photo-input" type="file" accept="image/*" hidden onChange={e => choosePhoto(e.target.files?.[0])} />
+                {photoPreview ? <div style={{ display: 'grid', gap: 10, justifyItems: 'center' }}><img src={photoPreview} alt="Selected item" style={{ width: 180, height: 140, objectFit: 'cover', borderRadius: 14, border: '1px solid #cbdbea' }} /><strong>Photo selected</strong><span style={{ color: '#64748b', fontSize: 13 }}>Click or drop another image to replace it</span></div> : <><div style={{ fontSize: 34 }}>📷</div><strong>Upload item photo</strong><div style={{ color: '#64748b', fontSize: 13, marginTop: 5 }}>Drag & drop a photo here on PC, or tap to choose on mobile</div><div style={{ color: '#94a3b8', fontSize: 12, marginTop: 4 }}>JPG, PNG or WEBP • Maximum 5 MB</div></>}
+              </div>
+
               <textarea placeholder="Short description (optional)" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={4} />
               <button className="primary" type="submit">{editingId ? 'Save changes' : 'Post item'}</button>
             </form>
