@@ -4,6 +4,8 @@ import { FormEvent, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/navigation';
 
+const VISIT_KEY = 'smart-campus-360-logged-in';
+
 export default function LoginPage() {
   const router = useRouter();
   const [registerNumber, setRegisterNumber] = useState('');
@@ -25,6 +27,7 @@ export default function LoginPage() {
       return;
     }
 
+    sessionStorage.setItem(VISIT_KEY, 'true');
     router.push('/');
   }
 
@@ -37,33 +40,11 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin}>
           <label htmlFor="register-number">Register number</label>
-          <input
-            id="register-number"
-            type="text"
-            inputMode="text"
-            autoComplete="username"
-            placeholder="Enter your register number"
-            value={registerNumber}
-            onChange={(e) => setRegisterNumber(e.target.value)}
-            required
-          />
-
+          <input id="register-number" type="text" inputMode="text" autoComplete="username" placeholder="Enter your register number" value={registerNumber} onChange={(e) => setRegisterNumber(e.target.value)} required />
           <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-
+          <input id="password" type="password" autoComplete="current-password" placeholder="Enter your password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           {message && <p className="login-error">{message}</p>}
-
-          <button className="login-button" disabled={loading} type="submit">
-            {loading ? 'Signing in...' : 'Sign in'}
-          </button>
+          <button className="login-button" disabled={loading} type="submit">{loading ? 'Signing in...' : 'Sign in'}</button>
         </form>
 
         <p className="login-note">Use the register number issued by your college.</p>
