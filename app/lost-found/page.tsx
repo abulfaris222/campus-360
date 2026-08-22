@@ -18,6 +18,8 @@ type Item = {
 
 type LFMessage = { id: string; item_id: string; sender_id: string; recipient_id: string; body: string; created_at: string; read_at: string | null; item?: { item_name: string } | null };
 
+type LFMessageRow = Omit<LFMessage, 'item'> & { item: { item_name: string }[] | { item_name: string } | null };
+
 export default function LostFoundPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [item, setItem] = useState('');
@@ -48,7 +50,11 @@ export default function LostFoundPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { data } = await supabase.from('lost_found_messages').select('id,item_id,sender_id,recipient_id,body,created_at,read_at,item:lost_found_items(item_name)').or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).order('created_at', { ascending: false });
-    setMessages((data ?? []) as LFMessage[]);
+    const normalizedMessages: LFMessage[] = ((data ?? []) as LFMessageRow[]).map((row) => ({
+      ...row,
+      item: Array.isArray(row.item) ? row.item[0] ?? null : row.item,
+    }));
+    setMessages(normalizedMessages);
   }
 
   useEffect(() => {
