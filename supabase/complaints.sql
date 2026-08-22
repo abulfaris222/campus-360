@@ -1,4 +1,4 @@
--- Smart Campus 360: Complaints + admin authorization
+-- Smart Campus 360: Complaints + staff/admin authorization
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -43,16 +43,16 @@ on public.complaints for update to authenticated
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-drop policy if exists "Admins can view all complaints" on public.complaints;
-create policy "Admins can view all complaints"
+drop policy if exists "Staff and admins can view all complaints" on public.complaints;
+create policy "Staff and admins can view all complaints"
 on public.complaints for select to authenticated
-using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+using (exists (select 1 from public.profiles where id = auth.uid() and role in ('staff', 'admin')));
 
-drop policy if exists "Admins can update complaints" on public.complaints;
-create policy "Admins can update complaints"
+drop policy if exists "Staff and admins can update complaints" on public.complaints;
+create policy "Staff and admins can update complaints"
 on public.complaints for update to authenticated
-using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'))
-with check (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+using (exists (select 1 from public.profiles where id = auth.uid() and role in ('staff', 'admin')))
+with check (exists (select 1 from public.profiles where id = auth.uid() and role in ('staff', 'admin')));
 
 drop policy if exists "Admins can delete complaints" on public.complaints;
 create policy "Admins can delete complaints"
