@@ -10,8 +10,16 @@ create table if not exists public.marketplace_listings (
   condition text not null check (condition in ('Like new', 'Good', 'Used')),
   category text not null check (category in ('Calculators', 'Books', 'Lab & Drawing', 'Bags', 'Electronics')),
   description text,
-  created_at timestamptz not null default now()
+  status text not null default 'Available' check (status in ('Available', 'Sold')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+
+alter table public.marketplace_listings add column if not exists status text not null default 'Available';
+alter table public.marketplace_listings add column if not exists updated_at timestamptz not null default now();
+
+alter table public.marketplace_listings drop constraint if exists marketplace_listings_status_check;
+alter table public.marketplace_listings add constraint marketplace_listings_status_check check (status in ('Available', 'Sold'));
 
 alter table public.marketplace_listings enable row level security;
 
@@ -68,5 +76,6 @@ with check (auth.uid() = recipient_id);
 
 create index if not exists marketplace_listings_created_at_idx on public.marketplace_listings(created_at desc);
 create index if not exists marketplace_listings_category_idx on public.marketplace_listings(category);
+create index if not exists marketplace_listings_status_idx on public.marketplace_listings(status, created_at desc);
 create index if not exists marketplace_messages_listing_idx on public.marketplace_messages(listing_id, created_at desc);
 create index if not exists marketplace_messages_recipient_read_idx on public.marketplace_messages(recipient_id, read_at, created_at desc);
