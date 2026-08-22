@@ -61,6 +61,8 @@ export default function Marketplace() {
   const [inboxLoading, setInboxLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [replyFor, setReplyFor] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
   const [form, setForm] = useState({ title: '', price: '', condition: 'Good' as Listing['condition'], category: 'Calculators', description: '' });
 
   async function loadListings() {
@@ -238,6 +240,24 @@ export default function Marketplace() {
     await loadMessages();
   }
 
+  async function replyToMessage(m: Message) {
+    if (!replyText.trim()) return;
+    const { error } = await supabase.from('marketplace_messages').insert({
+      listing_id: m.listing_id,
+      sender_id: currentUserId,
+      recipient_id: m.sender_id === currentUserId ? m.recipient_id : m.sender_id,
+      body: replyText.trim(),
+    });
+    if (error) setNotice(`Could not send reply: ${error.message}`);
+    else {
+      setReplyText('');
+      setReplyFor(null);
+      setNotice('Reply sent securely.');
+      await loadMessages();
+      setTimeout(() => setNotice(''), 3000);
+    }
+  }
+
   async function markRead(messageId: string) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -325,7 +345,7 @@ export default function Marketplace() {
             <p style={{ marginBottom: 16 }}>Messages about items you are selling or items you have contacted a seller about.</p>
             {inboxLoading && <p>Loading messages...</p>}
             {!inboxLoading && messages.length === 0 && <div style={{ padding: 24, textAlign: 'center', borderRadius: 12, background: 'rgba(0,0,0,.03)' }}>No messages yet.</div>}
-            <div style={{ display: 'grid', gap: 12 }}>{messages.map(m => { const incoming = m.recipient_id === currentUserId && !m.read_at; return <div key={m.id} className="card" style={{ padding: 16, border: incoming ? '2px solid #2563eb' : undefined }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}><div><strong>{m.listing?.title || 'Marketplace item'}</strong><p style={{ margin: '6px 0' }}>{m.body}</p><small>{new Date(m.created_at).toLocaleString('en-IN')}</small></div><div style={{ textAlign: 'right' }}>{incoming && <button className="quick-link" onClick={() => markRead(m.id)}>Mark as read</button>}</div></div></div>; })}</div>
+            <div style={{ display: 'grid', gap: 12 }}>{messages.map(m => { const incoming = m.recipient_id === currentUserId && !m.read_at; return <div key={m.id} className="card" style={{ padding: 16, border: incoming ? '2px solid #2563eb' : undefined }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}><div><strong>{m.listing?.title || 'Marketplace item'}</strong><p style={{ margin: '6px 0' }}>{m.body}</p><small>{new Date(m.created_at).toLocaleString('en-IN')}</small></div><div style={{ textAlign: 'right', display: 'grid', gap: 6 }}><button className="quick-link" onClick={() => { setReplyFor(replyFor === m.id ? null : m.id); setReplyText(''); }}>↩️ Reply</button>{incoming && <button className="quick-link" onClick={() => markRead(m.id)}>Mark as read</button>}</div></div>{replyFor === m.id && <form onSubmit={(e) => { e.preventDefault(); replyToMessage(m); }} style={{ display: 'grid', gap: 8, marginTop: 12 }}><textarea required maxLength={1000} rows={3} placeholder="Write your reply..." value={replyText} onChange={e => setReplyText(e.target.value)} /><button className="primary" type="submit">Send reply</button></form>}</div>; })}</div>
           </div>}
         </section>
       </main>
