@@ -28,14 +28,16 @@ export default function LoginPage() {
       return;
     }
 
-    // Keep the campus login identity available immediately after sign-in.
-    // The dashboard will still prefer the authoritative profiles table role.
     const knownRole = campusRegister === 'admin001' ? 'admin' : campusRegister === 'staff001' ? 'staff' : 'student';
+    sessionStorage.setItem(VISIT_KEY, 'true');
+    sessionStorage.setItem('campus-register-number', campusRegister);
+    sessionStorage.setItem('campus-role', knownRole);
+
+    // Keep the identity in Supabase metadata too; database profiles remain authoritative.
     await supabase.auth.updateUser({
       data: { register_number: campusRegister, role: knownRole },
     });
 
-    sessionStorage.setItem(VISIT_KEY, 'true');
     router.push('/');
   }
 
