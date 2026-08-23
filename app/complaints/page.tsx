@@ -13,6 +13,14 @@ type Complaint = {
   created_at: string;
 };
 
+type Reply = {
+  id: string;
+  complaint_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+};
+
 const starter: Complaint[] = [
   { id: 'demo-1', title: 'Library study-room light', category: 'Electrical', location: 'Library', details: 'Study-room light needs attention.', status: 'In Progress', created_at: new Date().toISOString() },
   { id: 'demo-2', title: 'Water dispenser issue', category: 'Facilities', location: 'Block B', details: 'Water dispenser is not working.', status: 'Resolved', created_at: new Date().toISOString() },
@@ -20,6 +28,9 @@ const starter: Complaint[] = [
 
 export default function ComplaintsPage() {
   const [items, setItems] = useState<Complaint[]>([]);
+  const [replies, setReplies] = useState<Reply[]>([]);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [replying, setReplying] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Facilities');
   const [location, setLocation] = useState('');
@@ -28,18 +39,28 @@ export default function ComplaintsPage() {
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
   const [role, setRole] = useState<'student' | 'staff' | 'admin'>('student');
+  const [userId, setUserId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | Complaint['status']>('All');
 
-  async function loadComplaints(currentRole = role) {
+  async function loadReplies(complaintIds: string[]) {
+    if (!complaintIds.length) { setReplies([]); return; }
+    const { data, error } = await supabase.from('complaint_replies').select('id,complaint_id,sender_id,body,created_at').in('complaint_id', complaintIds).order('created_at', { ascending: true });
+    if (!error) setReplies((data ?? []) as Reply[]);
+  }
+
+  async function loadComplaints(currentRole = role, ids?: string[]) {
     setLoading(true);
     const { data, error } = await supabase.from('complaints').select('id,title,category,location,details,status,created_at').order('created_at', { ascending: false });
     if (error) {
       setItems(currentRole === 'student' ? starter : []);
-      setNotice('Run supabase/complaints.sql in Supabase SQL Editor to enable saved complaints.');
+      setReplies([]);
+      setNotice('Run supabase/complaints.sql in Supabase SQL Editor to enable saved complaints and replies.');
     } else {
-      setItems((data ?? []) as Complaint[]);
+      const nextItems = (data ?? []) as Complaint[];
+      setItems(nextItems);
       setNotice('');
+      await loadReplies(ids ?? nextItems.map(item => item.id));
     }
     setLoading(false);
   }
@@ -48,6 +69,7 @@ export default function ComplaintsPage() {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        setUserId(user.id);
         const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
         const currentRole = (profile?.role ?? 'student') as 'student' | 'staff' | 'admin';
         setRole(currentRole);
@@ -75,6 +97,22 @@ export default function ComplaintsPage() {
     setItems(current => current.map(item => item.id === id ? { ...item, status } : item));
   }
 
+  async function sendReply(e: FormEvent, complaintId: string) {
+    e.preventDefault();
+    const body = (replyDrafts[complaintId] ?? '').trim();
+    if (!body || !userId || replying) return;
+    setReplying(complaintId);
+    const { data, error } = await supabase.from('complaint_replies').insert({ complaint_id: complaintId, sender_id: userId, body }).select('id,complaint_id,sender_id,body,created_at').single();
+    if (error) {
+      setNotice(`Could not send reply: ${error.message}`);
+      setReplying(null);
+      return;
+    }
+    if (data) setReplies(current => [...current, data as Reply]);
+    setReplyDrafts(current => ({ ...current, [complaintId]: '' }));
+    setReplying(null);
+  }
+
   const canManage = role === 'staff' || role === 'admin';
   const visibleItems = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -94,9 +132,15 @@ export default function ComplaintsPage() {
         <label>Details<textarea value={details} onChange={e=>setDetails(e.target.value)} placeholder="Describe the issue briefly..." rows={5}/></label>
         <button className="primary-btn" type="submit">Submit complaint</button>{sent && <p className="success-msg">Complaint submitted successfully.</p>}{notice && <p className="muted" style={{marginTop:10}}>{notice}</p>}
       </form></section>
-      <section><div className="card"><div className="section-title" style={{marginTop:0}}><div><h2>{canManage ? 'Campus complaints' : 'My complaints'}</h2>{canManage && <span>{role === 'staff' ? 'Staff can review every complaint and update its status.' : 'Admin can review every complaint and update its status.'}</span>}</div><span>{loading ? 'Loading...' : `${visibleItems.length} of ${items.length} reports`}</span></div>
+      <section><div className="card"><div className="section-title" style={{marginTop:0}}><div><h2>{canManage ? 'Campus complaints' : 'My complaints'}</h2>{canManage && <span>{role === 'staff' ? 'Staff can review every complaint, update status, and reply to students.' : 'Admin can review every complaint, update status, and reply to students.'}</span>}</div><span>{loading ? 'Loading...' : `${visibleItems.length} of ${items.length} reports`}</span></div>
         {canManage && <div className="complaint-tools"><div className="complaint-search">🔎<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search complaints..." /></div><select value={statusFilter} onChange={e=>setStatusFilter(e.target.value as typeof statusFilter)}><option>All</option><option>Submitted</option><option>In Progress</option><option>Resolved</option></select></div>}
-        {visibleItems.map(item=><div className="report-row" key={item.id}><div><b>{item.title}</b><p>{item.category} • {item.location}</p>{item.details && <p className="muted">{item.details}</p>}<small>{new Date(item.created_at).toLocaleString('en-IN')}</small></div><span className={'status '+item.status.toLowerCase().replaceAll(' ','-')}>{item.status}</span>{canManage && <select className="status-control" value={item.status} onChange={e=>updateStatus(item.id, e.target.value as Complaint['status'])}><option>Submitted</option><option>In Progress</option><option>Resolved</option></select>}</div>)}
+        {visibleItems.map(item=>{
+          const itemReplies = replies.filter(reply => reply.complaint_id === item.id);
+          return <div className="report-row" key={item.id}><div className="report-main"><b>{item.title}</b><p>{item.category} • {item.location}</p>{item.details && <p className="muted">{item.details}</p>}<small>{new Date(item.created_at).toLocaleString('en-IN')}</small>
+            {itemReplies.length > 0 && <div className="reply-list">{itemReplies.map(reply=><div className={'reply '+(reply.sender_id === userId ? 'mine' : '')} key={reply.id}><div><b>{reply.sender_id === userId ? (canManage ? 'You · Campus Staff' : 'You') : 'Campus Team'}</b><small>{new Date(reply.created_at).toLocaleString('en-IN')}</small></div><p>{reply.body}</p></div>)}</div>}
+            {canManage && <form className="reply-form" onSubmit={e=>sendReply(e,item.id)}><input value={replyDrafts[item.id] ?? ''} onChange={e=>setReplyDrafts(current=>({...current,[item.id]:e.target.value}))} placeholder="Reply to this student..." maxLength={1000}/><button type="submit" disabled={replying === item.id || !(replyDrafts[item.id] ?? '').trim()}>{replying === item.id ? 'Sending…' : 'Reply'}</button></form>}
+          </div><span className={'status '+item.status.toLowerCase().replaceAll(' ','-')}>{item.status}</span>{canManage && <select className="status-control" value={item.status} onChange={e=>updateStatus(item.id, e.target.value as Complaint['status'])}><option>Submitted</option><option>In Progress</option><option>Resolved</option></select>}</div>;
+        })}
         {!loading && !visibleItems.length && <div className="empty-state">{items.length ? 'No complaints match your filters.' : 'No complaints yet.'}</div>}
       </div></section>
     </div>
@@ -106,7 +150,19 @@ export default function ComplaintsPage() {
       .complaint-search{display:flex;align-items:center;gap:8px;flex:1;border:1px solid #c9d9ee;background:#fff;border-radius:10px;padding:0 11px;color:#52709a}
       .complaint-search input{border:0!important;outline:0!important;box-shadow:none!important;width:100%;min-height:40px;background:transparent}
       .status-control{min-width:128px}
-      @media(max-width:760px){.complaint-tools{flex-direction:column;align-items:stretch}.complaint-tools select{width:100%}.status-control{width:100%;margin-top:8px}.report-row{display:block}}
+      .report-main{flex:1;min-width:0}
+      .reply-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;max-width:720px}
+      .reply{padding:10px 12px;border:1px solid #dce7f5;background:#f6f9ff;border-radius:12px}
+      .reply.mine{background:#eef6ff;border-color:#c9def8}
+      .reply>div{display:flex;justify-content:space-between;gap:12px;align-items:center}
+      .reply small{color:#7890ad;font-weight:600}
+      .reply p{margin:5px 0 0;color:#334b69;line-height:1.45;white-space:pre-wrap}
+      .reply-form{display:flex;gap:8px;margin-top:10px;max-width:720px}
+      .reply-form input{flex:1;min-height:42px;border:1px solid #c9d9ee;border-radius:10px;padding:9px 12px;outline:none}
+      .reply-form input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+      .reply-form button{border:0;border-radius:10px;padding:0 16px;background:linear-gradient(135deg,#1769e0,#2388ff);color:#fff;font-weight:800;cursor:pointer}
+      .reply-form button:disabled{opacity:.5;cursor:not-allowed}
+      @media(max-width:760px){.complaint-tools{flex-direction:column;align-items:stretch}.complaint-tools select{width:100%}.status-control{width:100%;margin-top:8px}.report-row{display:block}.reply-form{flex-direction:column}.reply-form button{min-height:42px}.reply>div{align-items:flex-start;flex-direction:column;gap:2px}}
     `}</style>
   </main>;
 }
