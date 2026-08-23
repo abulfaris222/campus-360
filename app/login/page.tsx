@@ -18,14 +18,22 @@ export default function LoginPage() {
     setLoading(true);
     setMessage('');
 
-    const loginEmail = `${registerNumber.trim().toLowerCase()}@campus.local`;
-    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
+    const campusRegister = registerNumber.trim().toLowerCase();
+    const loginEmail = `${campusRegister}@campus.local`;
+    const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
 
-    if (error) {
+    if (error || !data.user) {
       setMessage('Invalid register number or password.');
       setLoading(false);
       return;
     }
+
+    // Keep the campus login identity available immediately after sign-in.
+    // The dashboard will still prefer the authoritative profiles table role.
+    const knownRole = campusRegister === 'admin001' ? 'admin' : campusRegister === 'staff001' ? 'staff' : 'student';
+    await supabase.auth.updateUser({
+      data: { register_number: campusRegister, role: knownRole },
+    });
 
     sessionStorage.setItem(VISIT_KEY, 'true');
     router.push('/');
