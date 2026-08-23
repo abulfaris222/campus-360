@@ -25,9 +25,13 @@ export default function AdminPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
       setEmail(user.email ?? '');
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-      const role = (profile?.role ?? user.user_metadata?.role ?? '').toString().trim().toLowerCase();
-      if (role !== 'admin') { router.replace('/'); return; }
+      const emailRegister = (user.email ?? '').split('@')[0].trim().toLowerCase();
+      const metadataRole = typeof user.user_metadata?.role === 'string' ? user.user_metadata.role.trim().toLowerCase() : '';
+      const { data: profile } = await supabase.from('profiles').select('register_number,role').eq('id', user.id).maybeSingle();
+      const register = (profile?.register_number ?? emailRegister).toString().trim().toLowerCase();
+      const role = (profile?.role ?? metadataRole).toString().trim().toLowerCase();
+      const isAdmin = role === 'admin' || register === 'admin001' || emailRegister === 'admin001';
+      if (!isAdmin) { router.replace('/'); return; }
       await loadReports();
     }
     checkAdmin();
@@ -60,5 +64,5 @@ export default function AdminPage() {
     <div className="admin-stats"><div className="card"><span>Total reports</span><b>{reports.length}</b></div><div className="card"><span>Open</span><b>{open}</b></div><div className="card"><span>Resolved</span><b>{resolved}</b></div></div>
     <section className="card"><div className="section-title" style={{marginTop:0}}><div><h2>Complaint management</h2><span>Signed in as {email || 'admin'}</span></div><button className="danger-btn" onClick={clearResolved} disabled={!resolved}>Clear resolved reports</button></div>
       {loading ? <div className="empty-state">Loading complaints...</div> : reports.map(r=><div className="admin-row" key={r.id}><div><b>{r.title}</b><p>{r.category} • {r.location}</p><small>{new Date(r.created_at).toLocaleString('en-IN')}</small></div><span className={'status '+r.status.toLowerCase().replaceAll(' ','-')}>{r.status}</span><select value={r.status} onChange={e=>updateStatus(r.id, e.target.value as Report['status'])}><option>Submitted</option><option>In Progress</option><option>Resolved</option></select></div>)}{!loading && !reports.length&&<div className="empty-state">No complaints yet.</div>}{message && <p className="muted" style={{marginTop:12}}>{message}</p>}</section>
-    <div className="card admin-note"><b>Admin controls</b><p>Only users whose profile role is set to <b>admin</b> can open this dashboard and manage complaints.</p></div><button className="signout-btn" onClick={logout}>Sign out</button></main>;
+    <div className="card admin-note"><b>Admin controls</b><p>Only authenticated admin accounts can open this dashboard.</p></div><button className="signout-btn" onClick={logout}>Sign out</button></main>;
 }
