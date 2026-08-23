@@ -1,4 +1,4 @@
--- Smart Campus 360: Complaints + staff/admin authorization
+-- Smart Campus 360: Complaints + staff/admin authorization + replies
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -61,3 +61,33 @@ using (exists (select 1 from public.profiles where id = auth.uid() and role = 'a
 
 create index if not exists complaints_user_idx on public.complaints(user_id, created_at desc);
 create index if not exists complaints_status_idx on public.complaints(status, created_at desc);
+
+create table if not exists public.complaint_replies (
+  id uuid primary key default gen_random_uuid(),
+  complaint_id uuid not null references public.complaints(id) on delete cascade,
+  sender_id uuid not null references auth.users(id) on delete cascade,
+  body text not null check (char_length(trim(body)) between 1 and 1000),
+  created_at timestamptz not null default now()
+);
+
+alter table public.complaint_replies enable row level security;
+
+drop policy if exists "Complaint participants can view replies" on public.complaint_replies;
+create policy "Complaint participants can view replies"
+on public.complaint_replies for select to authenticated
+using (
+  sender_id = auth.uid()
+  or exists (select 1 from public.complaints c where c.id = complaint_id and c.user_id = auth.uid())
+  or exists (select 1 from public.profiles where id = auth.uid() and role in ('staff', 'admin'))
+);
+
+drop policy if exists "Staff and admins can send complaint replies" on public.complaint_replies;
+create policy "Staff and admins can send complaint replies"
+on public.complaint_replies for insert to authenticated
+with check (
+  sender_id = auth.uid()
+  and exists (select 1 from public.profiles where id = auth.uid() and role in ('staff', 'admin'))
+);
+
+create index if not exists complaint_replies_complaint_idx on public.complaint_replies(complaint_id, created_at asc);
+create index if not exists complaint_replies_sender_idx on public.complaint_replies(sender_id, created_at desc);
