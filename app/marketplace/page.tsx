@@ -61,6 +61,8 @@ export default function Marketplace() {
   const [showInbox, setShowInbox] = useState(false);
   const [inboxLoading, setInboxLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState('');
+  const [role, setRole] = useState<'student' | 'staff' | 'admin'>('student');
+  const [sellerRegisters, setSellerRegisters] = useState<Record<string, string>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [replyFor, setReplyFor] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
@@ -90,6 +92,18 @@ export default function Marketplace() {
       return;
     }
     setCurrentUserId(user.id);
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+    const currentRole = (profile?.role ?? 'student') as 'student' | 'staff' | 'admin';
+    setRole(currentRole);
+    if (currentRole === 'staff' || currentRole === 'admin') {
+      const sellerIds = Array.from(new Set(items.filter(x => x.seller_id).map(x => x.seller_id)));
+      if (sellerIds.length) {
+        const { data: profiles } = await supabase.from('profiles').select('id,register_number').in('id', sellerIds);
+        const map: Record<string, string> = {};
+        (profiles ?? []).forEach((p: { id: string; register_number: string }) => { map[p.id] = p.register_number; });
+        setSellerRegisters(map);
+      }
+    }
 
     const { data, error } = await supabase
       .from('marketplace_messages')
@@ -353,6 +367,7 @@ export default function Marketplace() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><h3 style={{ margin: 0 }}>{item.title}</h3><span className="resource-type" style={{ color: item.status === 'Sold' ? '#b91c1c' : '#166534' }}>{item.status}</span>{mine && <span className="resource-type">Your listing</span>}</div>
                     <p>{item.condition} • {item.category}</p>
+                    {(role === 'staff' || role === 'admin') && item.seller_id && sellerRegisters[item.seller_id] && <p style={{ margin: '6px 0', fontWeight: 800, color: '#315b8a' }}>👤 Posted by: {sellerRegisters[item.seller_id]}</p>}
                     <p>{item.description || 'Campus marketplace listing'}</p>
                   </div>
                   <div style={{ textAlign: 'right', minWidth: 150 }}><strong style={{ fontSize: 20 }}>₹{Number(item.price).toLocaleString('en-IN')}</strong><br />
