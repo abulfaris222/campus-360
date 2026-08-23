@@ -1,0 +1,47 @@
+name: Add poster identity
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: "!contains(github.event.head_commit.message, '[poster-identity]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch pages
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/marketplace/page.tsx')
+          s = p.read_text()
+          s = s.replace("const [currentUserId, setCurrentUserId] = useState('');", "const [currentUserId, setCurrentUserId] = useState('');\n  const [role, setRole] = useState<'student' | 'staff' | 'admin'>('student');\n  const [sellerRegisters, setSellerRegisters] = useState<Record<string, string>>({});")
+          s = s.replace("    setCurrentUserId(user.id);", "    setCurrentUserId(user.id);\n    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();\n    const currentRole = (profile?.role ?? 'student') as 'student' | 'staff' | 'admin';\n    setRole(currentRole);\n    if (currentRole === 'staff' || currentRole === 'admin') {\n      const sellerIds = Array.from(new Set(items.filter(x => x.seller_id).map(x => x.seller_id)));\n      if (sellerIds.length) {\n        const { data: profiles } = await supabase.from('profiles').select('id,register_number').in('id', sellerIds);\n        const map: Record<string, string> = {};\n        (profiles ?? []).forEach((p: { id: string; register_number: string }) => { map[p.id] = p.register_number; });\n        setSellerRegisters(map);\n      }\n    }")
+          s = s.replace("<p>{item.condition} • {item.category}</p>", "<p>{item.condition} • {item.category}</p>\n                    {(role === 'staff' || role === 'admin') && item.seller_id && sellerRegisters[item.seller_id] && <p style={{ margin: '6px 0', fontWeight: 800, color: '#315b8a' }}>👤 Posted by: {sellerRegisters[item.seller_id]}</p>}")
+          p.write_text(s)
+
+          p = Path('app/lost-found/page.tsx')
+          s = p.read_text()
+          s = s.replace("  const [userId, setUserId] = useState('');", "  const [userId, setUserId] = useState('');\n  const [role, setRole] = useState<'student' | 'staff' | 'admin'>('student');\n  const [posterRegisters, setPosterRegisters] = useState<Record<string, string>>({});")
+          s = s.replace("      if (user) setUserId(user.id);", "      if (user) {\n        setUserId(user.id);\n        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();\n        const currentRole = (profile?.role ?? 'student') as 'student' | 'staff' | 'admin';\n        setRole(currentRole);\n        if (currentRole === 'staff' || currentRole === 'admin') {\n          const { data: profiles } = await supabase.from('profiles').select('id,register_number');\n          const map: Record<string, string> = {};\n          (profiles ?? []).forEach((p: { id: string; register_number: string }) => { map[p.id] = p.register_number; });\n          setPosterRegisters(map);\n        }\n      }")
+          s = s.replace("<p>{x.place} • {new Date(x.created_at).toLocaleString('en-IN')}</p>", "<p>{x.place} • {new Date(x.created_at).toLocaleString('en-IN')}</p>{(role === 'staff' || role === 'admin') && posterRegisters[x.user_id] && <p style={{ margin: '4px 0', fontWeight: 800, color: '#315b8a' }}>👤 Posted by: {posterRegisters[x.user_id]}</p>}")
+          p.write_text(s)
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/marketplace/page.tsx app/lost-found/page.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Show poster register numbers to staff and admin [poster-identity]"
+          git push
+      - name: Remove patch workflow
+        run: |
+          git rm .github/workflows/add-poster-identity.yml
+          git commit -m "Remove temporary poster identity workflow [poster-identity]"
+          git push
