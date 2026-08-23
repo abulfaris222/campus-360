@@ -44,9 +44,11 @@ export default function Home() {
 
       if (error) console.warn('Profile lookup failed:', error.message);
 
-      const registerNumber = (p?.register_number || metadataRegister || emailRegister || 'student001').trim();
-      const loginRole = emailRegister === 'admin001' ? 'admin' : emailRegister === 'staff001' ? 'staff' : 'student';
-      const role = (p?.role || metadataRole || loginRole).trim().toLowerCase();
+      const sessionRegister = typeof window !== 'undefined' ? (sessionStorage.getItem('campus-register-number') ?? '').trim() : '';
+      const sessionRole = typeof window !== 'undefined' ? (sessionStorage.getItem('campus-role') ?? '').trim().toLowerCase() : '';
+      const registerNumber = (sessionRegister || p?.register_number || metadataRegister || emailRegister || 'student001').trim();
+      const loginRole = registerNumber.toLowerCase() === 'admin001' ? 'admin' : registerNumber.toLowerCase() === 'staff001' ? 'staff' : 'student';
+      const role = (sessionRole || loginRole || p?.role || metadataRole || 'student').trim().toLowerCase();
 
       if (active) {
         setProfile({ register_number: registerNumber, role });
