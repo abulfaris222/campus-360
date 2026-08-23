@@ -26,7 +26,8 @@ export default function AdminPage() {
       if (!user) { router.replace('/login'); return; }
       setEmail(user.email ?? '');
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-      if (profile?.role !== 'admin') { router.replace('/'); return; }
+      const role = (profile?.role ?? user.user_metadata?.role ?? '').toString().trim().toLowerCase();
+      if (role !== 'admin') { router.replace('/'); return; }
       await loadReports();
     }
     checkAdmin();
